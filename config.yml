@@ -1,0 +1,11 @@
+
+hosts :
+    cloud1 :
+        domains:
+          - DockerNode1:
+                cippa: lippa
+                foo: bar
+          - DockerNode2:
+                cippa: lippa
+    cloud2 :
+    cloud3 :
