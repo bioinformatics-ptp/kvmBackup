@@ -1,11 +1,13 @@
 
-hosts :
-    cloud1 :
-        domains:
-          - DockerNode1:
-                cippa: lippa
-                foo: bar
-          - DockerNode2:
-                cippa: lippa
-    cloud2 :
-    cloud3 :
+cloud1 :
+    domains:
+        DockerNode1:
+            day_of_week: [Sun, Mon, Tue, Wed, Thu, Fri, Sat]
+            rotate: 3
+        DockerNode2:
+            day_of_week: [Sun]
+            rotate: 5
+            
+    backupdir: /mnt/cloud/kvm_backup/cloud1
+cloud2 :
+cloud3 :
