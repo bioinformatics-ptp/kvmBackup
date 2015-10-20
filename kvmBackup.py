@@ -37,76 +37,6 @@ def loadConf(file_conf):
     
     return mydomains, backupdir, config
     
-def dumpXML(domain, path):
-    """DumpXML inside PATH"""
-    
-    dest_file = "%s.xml" %(domain.name())
-    dest_file = os.path.join(path, dest_file)
-    
-    if os.path.exists(dest_file):
-        raise Exception, "File %s exists!!" %(dest_file)
-        
-    dest_fh = open(dest_file, "w")
-    
-    #dump different xmls files. First of all, the offline dump
-    xml = domain.XMLDesc()
-    dest_fh.write(xml)
-    dest_fh.close()
-    
-    logger.info("File %s wrote" %(dest_file))
-
-    #All flags: libvirt.VIR_DOMAIN_XML_INACTIVE, libvirt.VIR_DOMAIN_XML_MIGRATABLE, libvirt.VIR_DOMAIN_XML_SECURE, libvirt.VIR_DOMAIN_XML_UPDATE_CPU
-    dest_file = "%s-inactive.xml" %(domain.name())
-    dest_file = os.path.join(path, dest_file)
-    
-    if os.path.exists(dest_file):
-        raise Exception, "File %s exists!!" %(dest_file)
-        
-    dest_fh = open(dest_file, "w")
-    
-    #dump different xmls files. First of all, the offline dump
-    xml = domain.XMLDesc(flags=libvirt.VIR_DOMAIN_XML_INACTIVE)
-    dest_fh.write(xml)
-    dest_fh.close()
-    
-    logger.info("File %s wrote" %(dest_file))
-    
-    #Dump a migrate config file
-    dest_file = "%s-migratable.xml" %(domain.name())
-    dest_file = os.path.join(path, dest_file)
-    
-    if os.path.exists(dest_file):
-        raise Exception, "File %s exists!!" %(dest_file)
-        
-    dest_fh = open(dest_file, "w")
-    
-    #dump different xmls files. First of all, the offline dump
-    xml = domain.XMLDesc(flags=libvirt.VIR_DOMAIN_XML_INACTIVE+libvirt.VIR_DOMAIN_XML_MIGRATABLE)
-    dest_fh.write(xml)
-    dest_fh.close()
-    
-    logger.info("File %s wrote" %(dest_file))
-    
-def callSnapshot(domain):
-    """Create a snapshot for domain"""
-    
-    #i need a xml file for the domain
-    
-    
-def backup(domain, parameters):
-    pass
-    #TODO: call rotation directive
-
-    #TODO: call dumpXML
-
-    #TODO: call snapshot
-
-    #TODO: copy file
-
-    #TODO: block commit
-
-    #TODO: remove snapshot
-
 #a function to check current day of the week
 def checkDay(day):
     now = datetime.datetime.now()
@@ -147,6 +77,8 @@ if __name__ == "__main__":
             if checkDay(day) is True:
                 logger.info("Ready for back up of %s" %(domain_name))
                 domain_backup = True
+                
+                #TODO: do backup stuff
                 
                 #breaking cicle
                 break
