@@ -15,7 +15,9 @@ import libvirt
 import logging
 import argparse
 import datetime
-#import dateutils
+
+#my functions
+import helper
 
 # Logging istance
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
@@ -79,6 +81,7 @@ if __name__ == "__main__":
                 domain_backup = True
                 
                 #TODO: do backup stuff
+                helper.backup(domain_name, parameters, backupdir)
                 
                 #breaking cicle
                 break

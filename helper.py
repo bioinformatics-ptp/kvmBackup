@@ -14,10 +14,15 @@ import shlex
 import signal
 import libvirt
 import logging
+import tarfile
+import datetime
 import subprocess
 
 # To inspect xml
 import xml.etree.ElementTree as ET
+
+# For coping and moving files
+from shutil import move, copy2
 
 # Logging istance
 logger = logging.getLogger(__name__)
@@ -32,6 +37,11 @@ preexec_fn=lambda: signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 def dumpXML(domain, path):
     """DumpXML inside PATH"""
     
+    logger.info("Dumping XMLs for domain %s" %(domain.name()))
+    
+    #I need to return wrote files
+    xml_files = []
+    
     dest_file = "%s.xml" %(domain.name())
     dest_file = os.path.join(path, dest_file)
     
@@ -45,7 +55,8 @@ def dumpXML(domain, path):
     dest_fh.write(xml)
     dest_fh.close()
     
-    logger.info("File %s wrote" %(dest_file))
+    xml_files += [dest_file]
+    logger.debug("File %s wrote" %(dest_file))
 
     #All flags: libvirt.VIR_DOMAIN_XML_INACTIVE, libvirt.VIR_DOMAIN_XML_MIGRATABLE, libvirt.VIR_DOMAIN_XML_SECURE, libvirt.VIR_DOMAIN_XML_UPDATE_CPU
     dest_file = "%s-inactive.xml" %(domain.name())
@@ -61,7 +72,8 @@ def dumpXML(domain, path):
     dest_fh.write(xml)
     dest_fh.close()
     
-    logger.info("File %s wrote" %(dest_file))
+    xml_files += [dest_file]
+    logger.debug("File %s wrote" %(dest_file))
     
     #Dump a migrate config file
     dest_file = "%s-migratable.xml" %(domain.name())
@@ -77,7 +89,10 @@ def dumpXML(domain, path):
     dest_fh.write(xml)
     dest_fh.close()
     
-    logger.info("File %s wrote" %(dest_file))
+    xml_files += [dest_file]    
+    logger.debug("File %s wrote" %(dest_file))
+    
+    return xml_files
 
 #Define a function to get all disk for a certain domain
 def getDisks(domain):
@@ -138,14 +153,14 @@ class Snapshot():
         #call getDisk to get the disks to do snapshot
         return getDisks(domain)
         
-    def dumpXML(self):
+    def dumpXML(self, path):
         """Call dumpXML on my instance"""
         
         #get my domain
         domain = self.getDomain()
         
         #call getDisk to get the disks to do snapshot
-        return dumpXML(domain)
+        return dumpXML(domain, path)
 
     def getSnapshotXML(self):
         """Since I need to do a Snapshot with a XML file, I will create an XML to call
@@ -273,20 +288,103 @@ class Snapshot():
                 logger.error("original base: %s, top: %s, new_base: %s" %(base, top, test_base))
                 raise Exception, "Something goes wrong for snaphost %s" %(self.snapshotId)
 
-        
+#from https://bitbucket.org/russellballestrini/virt-back
+def rotate( target, retention = 3 ):
     
-def backup(domain, parameters):
+    """file rotation routine"""
+    for i in range( retention-2, 0, -1 ): # count backwards
+        old_name = "%s.%s" % ( target, i )
+        new_name = "%s.%s" % ( target, i + 1 )
+        
+        logger.debug("Moving %s into %s" %(old_name, new_name))
+        try: 
+            move( old_name, new_name)
+        except IOError: 
+            pass
+    
+    logger.debug("Moving %s into %s.1" %(target, target))
+    move( target, target + '.1' )        
+    
+def backup(domain, parameters, backupdir):
     """Do all the operation needed for backup"""
-    pass
+    
+    #changing directory
+    olddir = os.getcwd()
+    workdir = os.path.join(backupdir, domain)
+    
+    #creating directory if not exists
+    if not os.path.exists(workdir) and not os.path.isdir(workdir):
+        logger.info("Creating directory %s" %(workdir))
+        os.mkdir(workdir)
+    
+    #cange directory
+    os.chdir(workdir)
+    
+    #a timestamp directory in which to put files
+    date = datetime.datetime.now().strftime('%Y-%m-%d')
+    datadir = os.path.join(workdir, date)
+    
+    #creating datadir
+    os.mkdir(datadir)
+    
+    #define the target backup
+    ext, tar_mode = '.tar.gz', 'w:gz'
+      
+    tar_name = domain + ext 
+    tar_path = os.path.join( workdir, tar_name )
+    
+    #call rotation directive        
+    if os.path.isfile( tar_path ): # if file exists, run rotate
+        logger.info('rotating backup files for ' + domain )
+        rotate( tar_path, parameters["rotate"] )
 
-    #TODO: call rotation directive
+    tar = tarfile.open( tar_path, tar_mode )
+    
+    #create a snapshot instance
+    snapshot = Snapshot(domain)
 
-    #TODO: call dumpXML
+    #call dumpXML
+    xml_files = snapshot.dumpXML(path=datadir)
+    
+    #Add xmlsto archive, and remove original file
+    logger.info('Adding XMLs files for domain %s to archive %s' %(domain, tar_path))
+    
+    for xml_file in xml_files:
+        tar.add(xml_file)
+        logger.debug("%s added" %(xml_file))
+        
+        logger.debug("removing %s from %s" (xml_file, datadir))
+        os.remove(xml_file)
+        
 
-    #TODO: call snapshot
+    #call snapshot
+    snapshot.callSnapshot()
 
-    #TODO: copy file
+    logger.info('Adding image files for %s to archive %s' %(domain, tar_path))
+
+    #copying file
+    for disk, source in snapshot.disks:
+        dest = os.path.join(datadir, os.path.basename(source))
+        
+        logger.debug("copying %s to %s")
+        copy2( source, dest )
+
+        logger.debug("Adding %s to archive" (dest))        
+        tar.add(dest)
+        
+        logger.debug("removing %s from %s" (dest, datadir))
+        os.remove(dest)
 
     #TODO: block commit
 
     #TODO: remove snapshot
+
+    #closing archive
+    tar.close()
+    
+    #revoving EMPTY datadir
+    os.rmdir(datadir)
+
+    #return to the original directory
+    os.chdir(olddir)
+    
