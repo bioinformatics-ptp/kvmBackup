@@ -215,24 +215,64 @@ class Snapshot():
         #Once i've created a snapshot, I can read disks to have snapshot image name
         self.snapshot_disk = self.getDisks()
         
+        #debug
+        for disk, top in self.snapshot_disk.iteritems():
+            logger.debug("Created top image {top} for {domain_name} {disk}".format(top=top, domain_name=domain.name(), disk=disk))
+        
         return self.snapshot
         
     def doBlockCommit(self):
         """Do a blockcommit for every disks shapshotted"""
         
         #get a domain
-        domain = self.getDomain()      
+        domain = self.getDomain()
         
-        ##Those are the flags I need for blockcommit
-        [active] = [libvirt.VIR_DOMAIN_BLOCK_COMMIT_ACTIVE]
+        logger.info("Blockcommitting %s" %(domain.name()))
         
         #A blockcommit for every disks. Using names like libvirt variables. Base is the original image file
+        for disk in self.disks.iterkeys():
+            #the command to execute
+            my_cmd = "virsh blockcommit {domain_name} {disk} --active --verbose --pivot".format(domain_name=domain.name(), disk=disk)
+            logger.debug("Executing: %s" %(my_cmd))    
+        
+            #split the executable
+            my_cmds = shlex.split(my_cmd)
+            
+            #Launch command
+            blockcommit = subprocess.Popen(my_cmds, stdout=subprocess.PIPE, stderr=subprocess.PIPE, preexec_fn=preexec_fn, shell=False)
+            
+            #read output throug processing
+            for line in blockcommit.stdout:
+                line = line.strip()
+                if len(line) is 0:
+                    continue
+                
+                logger.debug("%s" %(line))
+            
+            #Lancio il comando e aspetto che termini
+            status = blockcommit.wait()
+            
+            if status != 0:
+                logger.error("Error for %s:%s" %(my_cmds, blockcommit.stderr.read()))
+                logger.critical("{exe} return {stato} state".format(stato=status, exe=my_cmds[0]))
+                raise Exception, "blockcommit didn't work properly"
+                
+        #After blockcommit, I need to check that image were successfully pivoted
+        test_disks = self.getDisks()
+        
         for disk, base in self.disks.iteritems():
-            #Top is the image file I want to commit. In this case, is the snapshot file
+            test_base = test_disks[disk]
             top = self.snapshot_disk[disk]
             
-            #virsh  blockcommit DockerNode2 hda --active --verbose --pivot
-            domain.blockCommit(disk, base, top, flags=sum([active]))
+            if base == test_base and top != test_base:
+                #I can remove the snapshotted image
+                logger.debug("Removing %s" %(top))
+                os.remove(top)
+                
+            else:
+                logger.error("original base: %s, top: %s, new_base: %s" %(base, top, test_base))
+                raise Exception, "Something goes wrong for snaphost %s" %(self.snapshotId)
+
         
     
 def backup(domain, parameters):
