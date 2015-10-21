@@ -9,10 +9,11 @@ Created on Fri Oct  9 11:20:46 2015
 import os
 import sys
 import yaml
-import pprint
+import shutil
 import socket
 import libvirt
 import logging
+import tarfile
 import argparse
 import datetime
 
@@ -49,6 +50,96 @@ def checkDay(day):
         
     return False
 
+def backup(domain, parameters, backupdir):
+    """Do all the operation needed for backup"""
+    
+    #changing directory
+    olddir = os.getcwd()
+    workdir = os.path.join(backupdir, domain)
+    
+    #creating directory if not exists
+    if not os.path.exists(workdir) and not os.path.isdir(workdir):
+        logger.info("Creating directory %s" %(workdir))
+        os.mkdir(workdir)
+    
+    #cange directory
+    os.chdir(workdir)
+    
+    #a timestamp directory in which to put files
+    date = datetime.datetime.now().strftime('%Y-%m-%d')
+    datadir = os.path.join(workdir, date)
+    
+    #creating datadir
+    logger.debug("Creating directory %s" %(datadir))
+    os.mkdir(datadir)
+    
+    #define the target backup
+    ext, tar_mode = '.tar', 'w'
+      
+    tar_name = domain + ext 
+    tar_path = os.path.join( workdir, tar_name )
+    tar_path_gz = tar_path + ".gz"
+    
+    #call rotation directive        
+    if os.path.isfile( tar_path_gz ): # if file exists, run rotate
+        logger.info('rotating backup files for ' + domain )
+        helper.rotate( tar_path_gz, parameters["rotate"] )
+
+    tar = tarfile.open( tar_path, tar_mode )
+    
+    #create a snapshot instance
+    snapshot = helper.Snapshot(domain)
+
+    #call dumpXML
+    xml_files = snapshot.dumpXML(path=datadir)
+    
+    #Add xmlsto archive, and remove original file
+    logger.info('Adding XMLs files for domain %s to archive %s' %(domain, tar_path))
+    
+    for xml_file in xml_files:
+        tar.add(xml_file)
+        logger.debug("%s added" %(xml_file))
+        
+        logger.debug("removing %s from %s" %(xml_file, datadir))
+        os.remove(xml_file)
+        
+
+    #call snapshot
+    snapshot.callSnapshot()
+
+    logger.info('Adding image files for %s to archive %s' %(domain, tar_path))
+
+    #copying file
+    for disk, source in snapshot.disks.iteritems():
+        dest = os.path.join(datadir, os.path.basename(source))
+        
+        logger.debug("copying %s to %s" %(source, dest))
+        shutil.copy2( source, dest )
+
+        logger.debug("Adding %s to archive" %(dest))        
+        tar.add(dest)
+        
+        logger.debug("removing %s from %s" %(dest, datadir))
+        os.remove(dest)
+
+    #block commit (and delete snapshot)
+    snapshot.doBlockCommit()
+
+    #closing archive
+    tar.close()
+    
+    #Now launcing subprocess with pigz
+    helper.packArchive(target=tar_name)
+    
+    #revoving EMPTY datadir
+    os.rmdir(datadir)
+
+    #return to the original directory
+    os.chdir(olddir)
+    
+    logger.info("Backup for %s completed" %(domain))
+
+
 # A global connection instance
 conn = libvirt.open("qemu:///system")
 
@@ -80,13 +171,16 @@ if __name__ == "__main__":
                 logger.info("Ready for back up of %s" %(domain_name))
                 domain_backup = True
                 
-                #TODO: do backup stuff
-                helper.backup(domain_name, parameters, backupdir)
+                #do backup stuff
+                backup(domain_name, parameters, backupdir)
                 
                 #breaking cicle
                 break
             
         if domain_backup is False:
             logger.debug("Ignoring %s domain" %(domain_name))
+            
+    #end of the program
+    logger.info("%s completed successfully" %(sys.argv[0]))
 
 

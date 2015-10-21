@@ -11,18 +11,14 @@ A module to deal with KVM backup
 import os
 import uuid
 import shlex
+import shutil
 import signal
 import libvirt
 import logging
-import tarfile
-import datetime
 import subprocess
 
 # To inspect xml
 import xml.etree.ElementTree as ET
-
-# For coping and moving files
-from shutil import move, copy2
 
 # Logging istance
 logger = logging.getLogger(__name__)
@@ -199,7 +195,7 @@ class Snapshot():
         
         if status != 0:
             logger.error("Error for %s:%s" %(my_cmds, create_xml.stderr.read()))
-            logger.critical("{exe} return {stato} state".format(stato=status, exe=my_cmds[0]))
+            logger.critical("{exe} returned {stato} state".format(stato=status, exe=my_cmds[0]))
             raise Exception, "snapshot-create-as didn't work properly"
             
         return self.snapshot_xml
@@ -269,7 +265,7 @@ class Snapshot():
             
             if status != 0:
                 logger.error("Error for %s:%s" %(my_cmds, blockcommit.stderr.read()))
-                logger.critical("{exe} return {stato} state".format(stato=status, exe=my_cmds[0]))
+                logger.critical("{exe} returned {stato} state".format(stato=status, exe=my_cmds[0]))
                 raise Exception, "blockcommit didn't work properly"
                 
         #After blockcommit, I need to check that image were successfully pivoted
@@ -287,6 +283,17 @@ class Snapshot():
             else:
                 logger.error("original base: %s, top: %s, new_base: %s" %(base, top, test_base))
                 raise Exception, "Something goes wrong for snaphost %s" %(self.snapshotId)
+                
+        #If I arrive here, I can delete snapshot
+        self.__snapshotDelete()
+                
+    def __snapshotDelete(self):
+        """delete current snapshot"""
+        
+        [metadata] = [libvirt.VIR_DOMAIN_SNAPSHOT_DELETE_METADATA_ONLY]
+        
+        logger.info("Removing snapshot %s" %(self.snapshotId))
+        self.snapshot.delete(flags=sum([metadata]))
 
 #from https://bitbucket.org/russellballestrini/virt-back
 def rotate( target, retention = 3 ):
@@ -298,93 +305,37 @@ def rotate( target, retention = 3 ):
         
         logger.debug("Moving %s into %s" %(old_name, new_name))
         try: 
-            move( old_name, new_name)
+            shutil.move( old_name, new_name)
         except IOError: 
             pass
     
     logger.debug("Moving %s into %s.1" %(target, target))
-    move( target, target + '.1' )        
-    
-def backup(domain, parameters, backupdir):
-    """Do all the operation needed for backup"""
-    
-    #changing directory
-    olddir = os.getcwd()
-    workdir = os.path.join(backupdir, domain)
-    
-    #creating directory if not exists
-    if not os.path.exists(workdir) and not os.path.isdir(workdir):
-        logger.info("Creating directory %s" %(workdir))
-        os.mkdir(workdir)
-    
-    #cange directory
-    os.chdir(workdir)
-    
-    #a timestamp directory in which to put files
-    date = datetime.datetime.now().strftime('%Y-%m-%d')
-    datadir = os.path.join(workdir, date)
-    
-    #creating datadir
-    os.mkdir(datadir)
-    
-    #define the target backup
-    ext, tar_mode = '.tar.gz', 'w:gz'
-      
-    tar_name = domain + ext 
-    tar_path = os.path.join( workdir, tar_name )
-    
-    #call rotation directive        
-    if os.path.isfile( tar_path ): # if file exists, run rotate
-        logger.info('rotating backup files for ' + domain )
-        rotate( tar_path, parameters["rotate"] )
+    shutil.move( target, target + '.1' )
 
-    tar = tarfile.open( tar_path, tar_mode )
+def packArchive(target):
+    """Launch pigz for compressing files"""
     
-    #create a snapshot instance
-    snapshot = Snapshot(domain)
+    my_cmd = "pigz --best --processes 8 %s" %(target)
+    logger.debug("Executing: %s" %(my_cmd))    
 
-    #call dumpXML
-    xml_files = snapshot.dumpXML(path=datadir)
+    #split the executable
+    my_cmds = shlex.split(my_cmd)
     
-    #Add xmlsto archive, and remove original file
-    logger.info('Adding XMLs files for domain %s to archive %s' %(domain, tar_path))
+    #Launch command
+    pigz = subprocess.Popen(my_cmds, stdout=subprocess.PIPE, stderr=subprocess.PIPE, preexec_fn=preexec_fn, shell=False)
     
-    for xml_file in xml_files:
-        tar.add(xml_file)
-        logger.debug("%s added" %(xml_file))
+    #read output throug processing
+    for line in pigz.stdout:
+        line = line.strip()
+        if len(line) is 0:
+            continue
         
-        logger.debug("removing %s from %s" (xml_file, datadir))
-        os.remove(xml_file)
-        
-
-    #call snapshot
-    snapshot.callSnapshot()
-
-    logger.info('Adding image files for %s to archive %s' %(domain, tar_path))
-
-    #copying file
-    for disk, source in snapshot.disks:
-        dest = os.path.join(datadir, os.path.basename(source))
-        
-        logger.debug("copying %s to %s")
-        copy2( source, dest )
-
-        logger.debug("Adding %s to archive" (dest))        
-        tar.add(dest)
-        
-        logger.debug("removing %s from %s" (dest, datadir))
-        os.remove(dest)
-
-    #TODO: block commit
-
-    #TODO: remove snapshot
-
-    #closing archive
-    tar.close()
+        logger.debug("%s" %(line))
     
-    #revoving EMPTY datadir
-    os.rmdir(datadir)
-
-    #return to the original directory
-    os.chdir(olddir)
+    #Lancio il comando e aspetto che termini
+    status = pigz.wait()
     
+    if status != 0:
+        logger.error("Error for %s:%s" %(my_cmds, pigz.stderr.read()))
+        logger.critical("{exe} returned {stato} state".format(stato=status, exe=my_cmds[0]))
+        raise Exception, "pigz didn't work properly"
