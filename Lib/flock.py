@@ -10,6 +10,10 @@ Simple lockfile to detect previous instances of app (Python recipe http://code.a
 
 import os
 import socket
+import logging
+
+# Logging istance
+logger = logging.getLogger(__name__)
 
 class flock(object):
     '''Class to handle creating and removing (pid) lockfiles'''
@@ -35,14 +39,14 @@ class flock(object):
         if self.islocked():
             if self.debug:
                 lock = self._readlock()
-                print 'Previous lock detected: %s' % self.pddr(lock)
+                logger.error('Previous lock detected: %s' % self.pddr(lock))
             return False
         try:
             fh = open(self.path, 'w')
             fh.write(self.addr())
             fh.close()
             if self.debug:
-                print 'Acquired lock: %s' % self.fddr()
+                logger.debug('Acquired lock: %s' % self.fddr())
         except:
             if os.path.isfile(self.path):
                 try:
@@ -59,7 +63,7 @@ class flock(object):
             try:
                 os.unlink(self.path)
                 if self.debug:
-                    print 'Released lock: %s' % self.fddr()
+                    logger.debug('Released lock: %s' % self.fddr())
             except:
                 raise (self.FileLockReleaseError,
                        'Error releasing lock: %s' % self.fddr())
@@ -101,19 +105,20 @@ class flock(object):
 ## from another teminal -- test2.py should print
 ## a message that there is a lock in place and exit.
 
-# test1.py
-from time import sleep
-#from flock import flock
-lock = flock('tmp.lock', True).acquire()
-if lock:
-    sleep(30)
-else:
-    print 'locked!'
-
-# test2.py
-from flock import flock
-lock = flock('tmp.lock', True).acquire()
-if lock:
-    print 'doing stuff'
-else:
-    print 'locked!'
+if __name__ == "__main__":
+    # test1.py
+    from time import sleep
+    #from flock import flock
+    lock = flock('tmp.lock', True).acquire()
+    if lock:
+        sleep(30)
+    else:
+        print 'locked!'
+    
+    # test2.py
+    from flock import flock
+    lock = flock('tmp.lock', True).acquire()
+    if lock:
+        print 'doing stuff'
+    else:
+        print 'locked!'

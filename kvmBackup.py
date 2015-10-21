@@ -18,7 +18,7 @@ import argparse
 import datetime
 
 #my functions
-import helper
+from Lib import helper, flock
 
 # Logging istance
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
@@ -147,6 +147,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Backup of KVM domains')
     parser.add_argument("-c", "--config", required=True, type=str, help="The config file")
     args = parser.parse_args()
+    
+    lockfile = os.path.splitext(os.path.basename(sys.argv[0]))[0] + ".lock"
+    lockfile_path = os.path.join("/var/run", lockfile)
+    
+    lock = flock.flock(lockfile_path, True).acquire()
+    
+    if not lock:
+        logger.error("Another istance of %s is running. Please wait for its termination or kill the running application" %(sys.argv[0]))
+        sys.exit(-1)
     
     #get all domain names
     domains = [domain.name() for domain in conn.listAllDomains()]
