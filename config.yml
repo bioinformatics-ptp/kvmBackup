@@ -17,9 +17,9 @@ cloud2 :
             day_of_week: [Wed]
             rotate: 4
 
-    backupdir: /mnt/cloud/kvm_backup/cloud2
+    backupdir: /mnt/dell_storage/cloud/kvm_backup/cloud2
     
 cloud3 :
     domains:
-    backupdir: /mnt/cloud/kvm_backup/cloud3
+    backupdir: /mnt/dell_storage/cloud/kvm_backup/cloud3
     
