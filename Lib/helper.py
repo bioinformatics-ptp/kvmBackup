@@ -303,14 +303,14 @@ def rotate( target, retention = 3 ):
         old_name = "%s.%s" % ( target, i )
         new_name = "%s.%s" % ( target, i + 1 )
         
-        logger.debug("Moving %s into %s" %(old_name, new_name))
-        try: 
+        if os.path.exists(old_name):
+            logger.debug("Moving %s into %s" %(old_name, new_name))
             shutil.move( old_name, new_name)
-        except IOError: 
-            pass
-    
-    logger.debug("Moving %s into %s.1" %(target, target))
-    shutil.move( target, target + '.1' )
+            
+    #Moving the first file
+    if os.path.exists(target):
+        logger.debug("Moving %s into %s.1" %(target, target))
+        shutil.move( target, target + '.1' )
 
 def packArchive(target):
     """Launch pigz for compressing files"""

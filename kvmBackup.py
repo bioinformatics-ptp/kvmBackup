@@ -22,7 +22,7 @@ from Lib import helper, flock
 
 # Logging istance
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
-logger = logging.getLogger(sys.argv[0])
+logger = logging.getLogger(__name__)
 
 # A function to open a config file
 def loadConf(file_conf):
@@ -148,6 +148,12 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--config", required=True, type=str, help="The config file")
     args = parser.parse_args()
     
+    # the program name
+    prog_name = os.path.basename(sys.argv[0])
+    
+    #end of the program
+    logger.info("Statring %s" %(prog_name))
+    
     lockfile = os.path.splitext(os.path.basename(sys.argv[0]))[0] + ".lock"
     lockfile_path = os.path.join("/var/run", lockfile)
     
@@ -190,6 +196,6 @@ if __name__ == "__main__":
             logger.debug("Ignoring %s domain" %(domain_name))
             
     #end of the program
-    logger.info("%s completed successfully" %(sys.argv[0]))
+    logger.info("%s completed successfully" %(prog_name))
 
 

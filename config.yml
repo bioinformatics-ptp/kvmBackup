@@ -2,11 +2,12 @@
 cloud1 :
     domains:
         DockerNode1:
-            day_of_week: [Sun, Mon, Tue, Wed, Thu, Fri, Sat]
+            #day_of_week: [Sun, Mon, Tue, Wed, Thu, Fri, Sat]
+            day_of_week: [Sun]
             rotate: 3
             
         DockerNode2:
-            day_of_week: [Sun, Wed]
+            day_of_week: [Sun]
             rotate: 5
             
     backupdir: /mnt/cloud/kvm_backup/cloud1
@@ -14,7 +15,7 @@ cloud1 :
 cloud2 :
     domains:
         core:
-            day_of_week: [Wed]
+            day_of_week: [Sun]
             rotate: 4
 
     backupdir: /mnt/dell_storage/cloud/kvm_backup/cloud2
