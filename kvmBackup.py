@@ -126,7 +126,7 @@ def backup(domain, parameters, backupdir):
         #backup file with its relative path
         img_file = os.path.basename(dest)
         img_file = os.path.join(date, img_file)
-        logger.debug("Adding %s to archive" %(img_file))
+        logger.debug("Adding %s to archive %s" %(img_file, tar_path))
         tar.add(img_file)
         
         logger.debug("removing %s from %s" %(img_file, datadir))
@@ -139,9 +139,11 @@ def backup(domain, parameters, backupdir):
     tar.close()
     
     #Now launcing subprocess with pigz
+    logger.info("Compressing %s" %(tar_name))
     helper.packArchive(target=tar_name)
     
     #revoving EMPTY datadir
+    logger.debug("removing %s" %(datadir))
     os.rmdir(datadir)
 
     #return to the original directory
@@ -191,7 +193,7 @@ if __name__ == "__main__":
         
         for day in parameters["day_of_week"]:
             if checkDay(day) is True or args.force is True:
-                logger.info("Ready for back up of %s" %(domain_name))
+                logger.info("Ready for backup of %s" %(domain_name))
                 domain_backup = True
                 
                 #do backup stuff
