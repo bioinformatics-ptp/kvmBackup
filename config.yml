@@ -4,11 +4,11 @@ cloud1 :
         DockerNode1:
             #day_of_week: [Sun, Mon, Tue, Wed, Thu, Fri, Sat]
             day_of_week: [Sun]
-            rotate: 3
+            rotate: 4
             
         DockerNode2:
             day_of_week: [Sun]
-            rotate: 5
+            rotate: 4
             
     backupdir: /mnt/cloud/kvm_backup/cloud1
     

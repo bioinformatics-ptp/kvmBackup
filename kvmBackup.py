@@ -20,9 +20,12 @@ import datetime
 #my functions
 from Lib import helper, flock
 
+# the program name
+prog_name = os.path.basename(sys.argv[0])
+
 # Logging istance
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(prog_name)
 
 # A function to open a config file
 def loadConf(file_conf):
@@ -97,6 +100,10 @@ def backup(domain, parameters, backupdir):
     logger.info('Adding XMLs files for domain %s to archive %s' %(domain, tar_path))
     
     for xml_file in xml_files:
+        #backup file with its relative path
+        xml_file = os.path.basename(xml_file)
+        xml_file = os.path.join(date, xml_file)
+        
         tar.add(xml_file)
         logger.debug("%s added" %(xml_file))
         
@@ -115,12 +122,15 @@ def backup(domain, parameters, backupdir):
         
         logger.debug("copying %s to %s" %(source, dest))
         shutil.copy2( source, dest )
-
-        logger.debug("Adding %s to archive" %(dest))        
-        tar.add(dest)
         
-        logger.debug("removing %s from %s" %(dest, datadir))
-        os.remove(dest)
+        #backup file with its relative path
+        img_file = os.path.basename(dest)
+        img_file = os.path.join(date, img_file)
+        logger.debug("Adding %s to archive" %(img_file))
+        tar.add(img_file)
+        
+        logger.debug("removing %s from %s" %(img_file, datadir))
+        os.remove(img_file)
 
     #block commit (and delete snapshot)
     snapshot.doBlockCommit()
@@ -144,15 +154,13 @@ def backup(domain, parameters, backupdir):
 conn = libvirt.open("qemu:///system")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Backup of KVM domains')
+    parser = argparse.ArgumentParser(description='Backup of KVM-qcow2 domains')
     parser.add_argument("-c", "--config", required=True, type=str, help="The config file")
+    parser.add_argument("--force", required=False, action='store_true', default=False, help="Force backup (with rotation)")
     args = parser.parse_args()
     
-    # the program name
-    prog_name = os.path.basename(sys.argv[0])
-    
     #end of the program
-    logger.info("Statring %s" %(prog_name))
+    logger.info("Starting %s" %(prog_name))
     
     lockfile = os.path.splitext(os.path.basename(sys.argv[0]))[0] + ".lock"
     lockfile_path = os.path.join("/var/run", lockfile)
@@ -182,7 +190,7 @@ if __name__ == "__main__":
         domain_backup = False
         
         for day in parameters["day_of_week"]:
-            if checkDay(day) is True:
+            if checkDay(day) is True or args.force is True:
                 logger.info("Ready for back up of %s" %(domain_name))
                 domain_backup = True
                 
