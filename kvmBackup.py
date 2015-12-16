@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-kvmBackup.py - a Software for Snapshotting KVM images and backing them up
+kvmBackup - a software for snapshotting KVM images and backing them up
 Copyright (C) 2015  PTP
 
 This program is free software: you can redistribute it and/or modify
