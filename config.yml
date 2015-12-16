@@ -22,5 +22,8 @@ cloud2 :
     
 cloud3 :
     domains:
+        webserverslave4:
+            day_of_week: [Sun]
+            rotate: 4
     backupdir: /mnt/dell_storage/cloud/kvm_backup/cloud3
     
