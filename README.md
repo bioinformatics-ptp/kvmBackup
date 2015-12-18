@@ -1,7 +1,8 @@
 
 kvmBackup
 =========================================================================
-a software for snapshotting KVM images and backing them up
+a software for snapshotting KVM images and backing them up. More information could be
+found in our [Wiki](https://github.com/bioinformatics-ptp/kvmBackup/wiki)
 
 ## License
 
@@ -135,3 +136,9 @@ MAILTO=root
 More information in using kvmBackup could be found in our [wiki - Running kvmBackup][running-kvmBackup]
 
 [running-kvmBackup]: https://github.com/bioinformatics-ptp/kvmBackup/wiki/Using-kvmBackup#running-kvmbackup
+
+## Restoring a backup
+
+Pleas see our [wiki - Restoring a backup][restoring-backup]
+
+[restoring-backup]: https://github.com/bioinformatics-ptp/kvmBackup/wiki/Restoring-a-backup#restoring-a-backup
