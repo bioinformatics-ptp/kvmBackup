@@ -45,9 +45,12 @@ used to perform other functions on the data.
 is that new writes to the original volume are redirected to another location set aside
 for snapshot. The original location contains the point-in-time data of the Guest,
 that is, snapshot, and the changed data reside on the snapshot storage. While snapshotting,
-[QEMU Guest Agent][qemu-agent] ensure you have a consistent disk state. Once snapshot is completed, a backup could be done by copying the original image in another location.
+[QEMU Guest Agent][qemu-agent] ensure you have a consistent disk state. Once snapshot
+is completed, a backup could be done by copying the original image in another location.
 Once backup is completed, the data from the snapshot storage must be reconciled back
 into the original volume, before removing snapshot.
+
+You can have a more detailed picture of snapshot by reading our [wiki - Introduction][wiki-introduction]
 
 kvmBackup tries to automatize such operations, by backing up domain configuration files
 and qcow images in a single backup file for each domain. The whole backup process could be
@@ -56,6 +59,7 @@ executed by cron, and older backup copies are handled by rotation.
 [SnapshotsQemu]: http://wiki.qemu.org/Documentation/CreateSnapshot
 [redirect]: http://www.ibm.com/developerworks/tivoli/library/t-snaptsm1/index.html
 [qemu-agent]: http://wiki.libvirt.org/page/Qemu_guest_agent
+[wiki-introduction]: https://github.com/bioinformatics-ptp/kvmBackup/wiki/Introduction#introduction
 
 ## Installation
 
@@ -65,6 +69,10 @@ to snapshot KVM images and configuration file. You can install software simply u
 ```bash
 $ git clone https://github.com/bioinformatics-ptp/kvmBackup.git
 ```
+
+More information in installing `kvmBackup` could be found in our [wiki - Install kvmBackup][install-kvmBackup]
+
+[install-kvmBackup]: https://github.com/bioinformatics-ptp/kvmBackup/wiki/Using-kvmBackup#install-kvmbackup
 
 ## Configuration
 
@@ -90,13 +98,17 @@ third level you need to specify the domain names to backup (you can inspect doma
 names by typing `virsh list --all`), and in its sublevels you need to specify the
 day of week where the backup will be done and how many bakcup use for rotation
 
+More information on kvmBackup configuration could be found in our [wiki - Configure kvmBackup][configure-kvmBacup]
+
+[configure-kvmBacup]: https://github.com/bioinformatics-ptp/kvmBackup/wiki/Using-kvmBackup#configure-kvmbackup
+
 ## Usage
 
 Launch kvmBackup as a provileged user (`root` or using `suod`) by specyfing the
 path of your config file:
 
 ```bash
-kvmBackup.py --config </path/to/config.yaml>
+$ kvmBackup.py --config </path/to/config.yaml>
 ```
 
 It's better to run kvmBackup every day using cron. Here's an example of `/etc/crontab`
@@ -119,3 +131,7 @@ MAILTO=root
 # *  *  *  *  * user-name  command to be executed
   0  2  *  *  * root /mnt/cloud/Utilities/kvmBackup/kvmBackup.py --config /mnt/cloud/Utilities/kvmBackup/config.yml >> /var/log/kvmBackup 2>&1
 ```
+
+More information in using kvmBackup could be found in our [wiki - Running kvmBackup][running-kvmBackup]
+
+[running-kvmBackup]: https://github.com/bioinformatics-ptp/kvmBackup/wiki/Using-kvmBackup#running-kvmbackup
