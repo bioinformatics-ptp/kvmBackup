@@ -3,7 +3,7 @@
 """
 
 kvmBackup - a software for snapshotting KVM images and backing them up
-Copyright (C) 2015  PTP
+Copyright (C) 2015-2016  PTP
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -46,7 +46,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(prog_name)
 
 notice = """
-kvmBackup.py  Copyright (C) 2015  PTP
+kvmBackup.py  Copyright (C) 2015-2016  PTP
 This program comes with ABSOLUTELY NO WARRANTY; for details type `kvmBackup.py --help'.
 This is free software, and you are welcome to redistribute it
 under certain conditions; see LICENSE.txt for details.
@@ -79,16 +79,35 @@ def checkDay(day):
 
     return False
 
+def filterDomains(domains, user_domains):
+    """filter domamin by user domains"""
+
+    # Those are user domains (as a list)
+    user_domains = [domain.strip() for domain in user_domains.split(",")]
+    found_domains = []
+    
+    # test for domain existances
+    for domain in user_domains:
+        if domain not in domains:
+            logger.error("User domain '%s' not found" %(domain))
+            
+        else:
+            found_domains += [domain]
+            
+    # Now return the filtered domains
+    return found_domains
+    
+
 def backup(domain, parameters, backupdir):
     """Do all the operation needed for backup"""
-
+    
     #changing directory
     olddir = os.getcwd()
     workdir = os.path.join(backupdir, domain)
 
     #creating directory if not exists
     if not os.path.exists(workdir) and not os.path.isdir(workdir):
-        logger.info("Creating directory %s" %(workdir))
+        logger.info("Creating directory '%s'" %(workdir))
         os.mkdir(workdir)
 
     #cange directory
@@ -99,7 +118,7 @@ def backup(domain, parameters, backupdir):
     datadir = os.path.join(workdir, date)
 
     #creating datadir
-    logger.debug("Creating directory %s" %(datadir))
+    logger.debug("Creating directory '%s'" %(datadir))
     os.mkdir(datadir)
 
     #define the target backup
@@ -123,7 +142,7 @@ def backup(domain, parameters, backupdir):
     xml_files = snapshot.dumpXML(path=datadir)
 
     #Add xmlsto archive, and remove original file
-    logger.info('Adding XMLs files for domain %s to archive %s' %(domain, tar_path))
+    logger.info("Adding XMLs files for domain '%s' to archive '%s'" %(domain, tar_path))
 
     for xml_file in xml_files:
         #backup file with its relative path
@@ -131,31 +150,31 @@ def backup(domain, parameters, backupdir):
         xml_file = os.path.join(date, xml_file)
 
         tar.add(xml_file)
-        logger.debug("%s added" %(xml_file))
+        logger.debug("'%s' added" %(xml_file))
 
-        logger.debug("removing %s from %s" %(xml_file, datadir))
+        logger.debug("removing '%s' from '%s'" %(xml_file, datadir))
         os.remove(xml_file)
 
 
     #call snapshot
     snapshot.callSnapshot()
 
-    logger.info('Adding image files for %s to archive %s' %(domain, tar_path))
+    logger.info("Adding image files for '%s' to archive %'s'" %(domain, tar_path))
 
     #copying file
     for disk, source in snapshot.disks.iteritems():
         dest = os.path.join(datadir, os.path.basename(source))
 
-        logger.debug("copying %s to %s" %(source, dest))
+        logger.debug("copying '%s' to '%s'" %(source, dest))
         shutil.copy2( source, dest )
 
         #backup file with its relative path
         img_file = os.path.basename(dest)
         img_file = os.path.join(date, img_file)
-        logger.debug("Adding %s to archive %s" %(img_file, tar_path))
+        logger.debug("Adding '%s' to archive '%s'" %(img_file, tar_path))
         tar.add(img_file)
 
-        logger.debug("removing %s from %s" %(img_file, datadir))
+        logger.debug("removing '%s' from '%s'" %(img_file, datadir))
         os.remove(img_file)
 
     #block commit (and delete snapshot)
@@ -165,17 +184,17 @@ def backup(domain, parameters, backupdir):
     tar.close()
 
     #Now launcing subprocess with pigz
-    logger.info("Compressing %s" %(tar_name))
+    logger.info("Compressing '%s'" %(tar_name))
     helper.packArchive(target=tar_name)
 
     #revoving EMPTY datadir
-    logger.debug("removing %s" %(datadir))
+    logger.debug("removing '%s'" %(datadir))
     os.rmdir(datadir)
 
     #return to the original directory
     os.chdir(olddir)
 
-    logger.info("Backup for %s completed" %(domain))
+    logger.info("Backup for '%s' completed" %(domain))
 
 
 # A global connection instance
@@ -185,6 +204,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Backup of KVM-qcow2 domains')
     parser.add_argument("-c", "--config", required=True, type=str, help="The config file")
     parser.add_argument("--force", required=False, action='store_true', default=False, help="Force backup (with rotation)")
+    parser.add_argument("--domains", required=False, type=str, help="comma separated list of domains to backup ('virsh list --all' to get domains)")
     args = parser.parse_args()
 
     #logging notice
@@ -192,7 +212,7 @@ if __name__ == "__main__":
     sys.stderr.flush()
 
     #Starting software
-    logger.info("Starting %s" %(prog_name))
+    logger.info("Starting '%s'" %(prog_name))
 
     lockfile = os.path.splitext(os.path.basename(sys.argv[0]))[0] + ".lock"
     lockfile_path = os.path.join("/var/run", lockfile)
@@ -200,18 +220,23 @@ if __name__ == "__main__":
     lock = flock.flock(lockfile_path, True).acquire()
 
     if not lock:
-        logger.error("Another istance of %s is running. Please wait for its termination or kill the running application" %(sys.argv[0]))
+        logger.error("Another istance of '%s' is running. Please wait for its termination or kill the running application" %(sys.argv[0]))
         sys.exit(-1)
 
     #get all domain names
     domains = [domain.name() for domain in conn.listAllDomains()]
+    
+    # filter domains with user provides domains (if needed)
+    if args.domains is not None:
+        logger.info("Checking '%s' domains" %(args.domains))
+        domains = filterDomains(domains,args.domains)
 
     #parse configuration file
     mydomains, backupdir, config = loadConf(args.config)
 
     #test for directory existance
     if not os.path.exists(backupdir) and os.path.isdir(backupdir) is False:
-        logger.info("Creating directory %s" %(backupdir))
+        logger.info("Creating directory '%s'" %(backupdir))
         os.mkdir(backupdir)
 
     #debug
@@ -220,10 +245,15 @@ if __name__ == "__main__":
     for domain_name, parameters in mydomains.iteritems():
         #check if bakcup is needed
         domain_backup = False
+        
+        #check if configuration domain exists or was filtered out
+        if domain_name not in domains:
+            logger.warn("Ignoring domain '%s'" %(domain_name))
+            continue
 
         for day in parameters["day_of_week"]:
             if checkDay(day) is True or args.force is True:
-                logger.info("Ready for backup of %s" %(domain_name))
+                logger.info("Ready for backup of '%s'" %(domain_name))
                 domain_backup = True
 
                 #do backup stuff
@@ -233,7 +263,7 @@ if __name__ == "__main__":
                 break
 
         if domain_backup is False:
-            logger.debug("Ignoring %s domain" %(domain_name))
+            logger.debug("Ignoring '%s' domain" %(domain_name))
 
     #end of the program
-    logger.info("%s completed successfully" %(prog_name))
+    logger.info("'%s' completed successfully" %(prog_name))

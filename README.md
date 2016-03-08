@@ -7,7 +7,7 @@ found in our [Wiki](https://github.com/bioinformatics-ptp/kvmBackup/wiki)
 ## License
 
 kvmBackup - a software for snapshotting KVM images and backing them up  
-Copyright (C) 2015  PTP
+Copyright (C) 2015-2016  PTP
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -90,7 +90,7 @@ cloud1: #The hostname which will do backup
 ```
 
 The first level (`cloud1` in the example) is the name of the host in which those
-configuration apply; it could be determined by typing `hostname -s`. Configurations
+configurations apply; it could be determined by typing `hostname -s`. Configurations
 defined under a different hostname will not by applied in such host. The second yaml
 level define a `domain` by specyfing all Guest domains we need to provide a backup,
 and a `backupdir` directory in which backup will be placed. In this directory will
@@ -105,7 +105,7 @@ More information on kvmBackup configuration could be found in our [wiki - Config
 
 ## Usage
 
-Launch kvmBackup as a provileged user (`root` or using `suod`) by specyfing the
+Launch kvmBackup as a provileged user (`root` or using `sudo`) by specyfing the
 path of your config file:
 
 ```bash
