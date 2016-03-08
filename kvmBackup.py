@@ -101,6 +101,13 @@ def filterDomains(domains, user_domains):
 def backup(domain, parameters, backupdir):
     """Do all the operation needed for backup"""
     
+    # create a snapshot instance
+    snapshot = helper.Snapshot(domain)
+    
+    # check if no snapshot are defined
+    if snapshot.hasCurrentSnapshot() is True:
+        raise Exception, "Domain '%s' has already a snapshot" %(domain)
+    
     #changing directory
     olddir = os.getcwd()
     workdir = os.path.join(backupdir, domain)
@@ -135,9 +142,6 @@ def backup(domain, parameters, backupdir):
 
     tar = tarfile.open( tar_path, tar_mode )
 
-    #create a snapshot instance
-    snapshot = helper.Snapshot(domain)
-
     #call dumpXML
     xml_files = snapshot.dumpXML(path=datadir)
 
@@ -159,7 +163,7 @@ def backup(domain, parameters, backupdir):
     #call snapshot
     snapshot.callSnapshot()
 
-    logger.info("Adding image files for '%s' to archive %'s'" %(domain, tar_path))
+    logger.info("Adding image files for '%s' to archive '%s'" %(domain, tar_path))
 
     #copying file
     for disk, source in snapshot.disks.iteritems():
@@ -210,6 +214,9 @@ if __name__ == "__main__":
     #logging notice
     sys.stderr.write(notice)
     sys.stderr.flush()
+    
+    # a flat to test if there were errors
+    flag_errors = False
 
     #Starting software
     logger.info("Starting '%s'" %(prog_name))
@@ -257,7 +264,13 @@ if __name__ == "__main__":
                 domain_backup = True
 
                 #do backup stuff
-                backup(domain_name, parameters, backupdir)
+                try:
+                    backup(domain_name, parameters, backupdir)
+                
+                except Exception, message:
+                    logger.exception(message)
+                    logger.error("Domain '%s' was not backed up" %(domain_name))
+                    flag_errors = True
 
                 #breaking cicle
                 break
@@ -266,4 +279,7 @@ if __name__ == "__main__":
             logger.debug("Ignoring '%s' domain" %(domain_name))
 
     #end of the program
-    logger.info("'%s' completed successfully" %(prog_name))
+    if flag_errors is False:
+        logger.info("'%s' completed successfully" %(prog_name))
+    else:
+        logger.warn("'%s' completed with error(s)" %(prog_name))

@@ -174,6 +174,18 @@ class Snapshot():
 
         #call getDisk to get the disks to do snapshot
         return dumpXML(domain, path)
+        
+    def hasCurrentSnapshot(self):
+        """call hasCurrentSnapshot on domain class attribute"""
+        
+        #get my domain
+        domain = self.getDomain()
+        
+        if domain.hasCurrentSnapshot() == 0:
+            return False
+            
+        else:
+            return True
 
     def getSnapshotXML(self):
         """Since I need to do a Snapshot with a XML file, I will create an XML to call
@@ -314,8 +326,8 @@ class Snapshot():
 
 #from https://bitbucket.org/russellballestrini/virt-back
 def rotate( target, retention = 3 ):
-
     """file rotation routine"""
+    
     for i in range( retention-2, 0, -1 ): # count backwards
         old_name = "%s.%s" % ( target, i )
         new_name = "%s.%s" % ( target, i + 1 )
