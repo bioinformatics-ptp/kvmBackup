@@ -24,25 +24,27 @@ Created on Fri Oct  9 11:20:46 2015
 
 """
 
-import os
-import sys
-import yaml
-import shutil
-import socket
-import libvirt
-import logging
-import tarfile
 import argparse
 import datetime
+import logging
+import os
+import shutil
+import socket
+import sys
+import tarfile
 
-#my functions
-from Lib import helper, flock
+import libvirt
+import yaml
+
+# my functions
+from Lib import flock, helper
 
 # the program name
 prog_name = os.path.basename(sys.argv[0])
 
 # Logging istance
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
 logger = logging.getLogger(prog_name)
 
 notice = """
@@ -54,22 +56,26 @@ under certain conditions; see LICENSE.txt for details.
 """
 
 # A function to open a config file
+
+
 def loadConf(file_conf):
     config = yaml.load(open(file_conf))
 
-    #read my defined domains
+    # read my defined domains
     hostname = socket.gethostname()
     hostname = hostname.split(".")[0]
 
-    #try to parse useful data
+    # try to parse useful data
     mydomains = config[hostname]["domains"]
 
-    #get my backup directory
+    # get my backup directory
     backupdir = config[hostname]["backupdir"]
 
     return mydomains, backupdir, config
 
-#a function to check current day of the week
+# a function to check current day of the week
+
+
 def checkDay(day):
     now = datetime.datetime.now()
     today = now.strftime("%a")
@@ -79,126 +85,128 @@ def checkDay(day):
 
     return False
 
+
 def filterDomains(domains, user_domains):
     """filter domamin by user domains"""
 
     # Those are user domains (as a list)
     user_domains = [domain.strip() for domain in user_domains.split(",")]
     found_domains = []
-    
+
     # test for domain existances
     for domain in user_domains:
         if domain not in domains:
-            logger.error("User domain '%s' not found" %(domain))
-            
+            logger.error("User domain '%s' not found" % (domain))
+
         else:
             found_domains += [domain]
-            
+
     # Now return the filtered domains
     return found_domains
-    
+
 
 def backup(domain, parameters, backupdir):
     """Do all the operation needed for backup"""
-    
+
     # create a snapshot instance
     snapshot = helper.Snapshot(domain)
-    
+
     # check if no snapshot are defined
     if snapshot.hasCurrentSnapshot() is True:
-        raise Exception, "Domain '%s' has already a snapshot" %(domain)
-    
-    #changing directory
+        raise Exception, "Domain '%s' has already a snapshot" % (domain)
+
+    # changing directory
     olddir = os.getcwd()
     workdir = os.path.join(backupdir, domain)
 
-    #creating directory if not exists
+    # creating directory if not exists
     if not os.path.exists(workdir) and not os.path.isdir(workdir):
-        logger.info("Creating directory '%s'" %(workdir))
+        logger.info("Creating directory '%s'" % (workdir))
         os.mkdir(workdir)
 
-    #cange directory
+    # cange directory
     os.chdir(workdir)
 
-    #a timestamp directory in which to put files
+    # a timestamp directory in which to put files
     date = datetime.datetime.now().strftime('%Y-%m-%d')
     datadir = os.path.join(workdir, date)
 
-    #creating datadir
-    logger.debug("Creating directory '%s'" %(datadir))
+    # creating datadir
+    logger.debug("Creating directory '%s'" % (datadir))
     os.mkdir(datadir)
 
-    #define the target backup
+    # define the target backup
     ext, tar_mode = '.tar', 'w'
 
     tar_name = domain + ext
-    tar_path = os.path.join( workdir, tar_name )
+    tar_path = os.path.join(workdir, tar_name)
     tar_path_gz = tar_path + ".gz"
 
-    #call rotation directive
-    if os.path.isfile( tar_path_gz ): # if file exists, run rotate
-        logger.info('rotating backup files for ' + domain )
-        helper.rotate( tar_path_gz, parameters["rotate"] )
+    # call rotation directive
+    if os.path.isfile(tar_path_gz):  # if file exists, run rotate
+        logger.info('rotating backup files for ' + domain)
+        helper.rotate(tar_path_gz, parameters["rotate"])
 
-    tar = tarfile.open( tar_path, tar_mode )
+    tar = tarfile.open(tar_path, tar_mode)
 
-    #call dumpXML
+    # call dumpXML
     xml_files = snapshot.dumpXML(path=datadir)
 
-    #Add xmlsto archive, and remove original file
-    logger.info("Adding XMLs files for domain '%s' to archive '%s'" %(domain, tar_path))
+    # Add xmlsto archive, and remove original file
+    logger.info("Adding XMLs files for domain '%s' to archive '%s'" %
+                (domain, tar_path))
 
     for xml_file in xml_files:
-        #backup file with its relative path
+        # backup file with its relative path
         xml_file = os.path.basename(xml_file)
         xml_file = os.path.join(date, xml_file)
 
         tar.add(xml_file)
-        logger.debug("'%s' added" %(xml_file))
+        logger.debug("'%s' added" % (xml_file))
 
-        logger.debug("removing '%s' from '%s'" %(xml_file, datadir))
+        logger.debug("removing '%s' from '%s'" % (xml_file, datadir))
         os.remove(xml_file)
 
-
-    #call snapshot
+    # call snapshot
     snapshot.callSnapshot()
 
-    logger.info("Adding image files for '%s' to archive '%s'" %(domain, tar_path))
+    logger.info("Adding image files for '%s' to archive '%s'" %
+                (domain, tar_path))
 
-    #copying file
+    # copying file
     for disk, source in snapshot.disks.iteritems():
         dest = os.path.join(datadir, os.path.basename(source))
 
-        logger.debug("copying '%s' to '%s'" %(source, dest))
-        shutil.copy2( source, dest )
+        logger.debug("copying '%s' to '%s'" % (source, dest))
+        shutil.copy2(source, dest)
 
-        #backup file with its relative path
+        # backup file with its relative path
         img_file = os.path.basename(dest)
         img_file = os.path.join(date, img_file)
-        logger.debug("Adding '%s' to archive '%s'" %(img_file, tar_path))
+        logger.debug("Adding '%s' to archive '%s'" % (img_file, tar_path))
         tar.add(img_file)
 
-        logger.debug("removing '%s' from '%s'" %(img_file, datadir))
+        logger.debug("removing '%s' from '%s'" % (img_file, datadir))
         os.remove(img_file)
 
-    #block commit (and delete snapshot)
+    # block commit (and delete snapshot)
     snapshot.doBlockCommit()
 
-    #closing archive
+    # closing archive
     tar.close()
 
-    #Now launcing subprocess with pigz
-    logger.info("Compressing '%s'" %(tar_name))
+    # Now launcing subprocess with pigz
+    logger.info("Compressing '%s'" % (tar_name))
     helper.packArchive(target=tar_name)
 
-    #revoving EMPTY datadir
-    logger.debug("removing '%s'" %(datadir))
+    # revoving EMPTY datadir
+    logger.debug("removing '%s'" % (datadir))
     os.rmdir(datadir)
 
-    #return to the original directory
+    # return to the original directory
     os.chdir(olddir)
 
-    logger.info("Backup for '%s' completed" %(domain))
+    logger.info("Backup for '%s' completed" % (domain))
 
 
 # A global connection instance
@@ -206,20 +214,23 @@ conn = libvirt.open("qemu:///system")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Backup of KVM-qcow2 domains')
-    parser.add_argument("-c", "--config", required=True, type=str, help="The config file")
-    parser.add_argument("--force", required=False, action='store_true', default=False, help="Force backup (with rotation)")
-    parser.add_argument("--domains", required=False, type=str, help="comma separated list of domains to backup ('virsh list --all' to get domains)")
+    parser.add_argument("-c", "--config", required=True,
+                        type=str, help="The config file")
+    parser.add_argument("--force", required=False, action='store_true',
+                        default=False, help="Force backup (with rotation)")
+    parser.add_argument("--domains", required=False, type=str,
+                        help="comma separated list of domains to backup ('virsh list --all' to get domains)")
     args = parser.parse_args()
 
-    #logging notice
+    # logging notice
     sys.stderr.write(notice)
     sys.stderr.flush()
-    
+
     # a flat to test if there were errors
     flag_errors = False
 
-    #Starting software
-    logger.info("Starting '%s'" %(prog_name))
+    # Starting software
+    logger.info("Starting '%s'" % (prog_name))
 
     lockfile = os.path.splitext(os.path.basename(sys.argv[0]))[0] + ".lock"
     lockfile_path = os.path.join("/var/run", lockfile)
@@ -227,59 +238,61 @@ if __name__ == "__main__":
     lock = flock.flock(lockfile_path, True).acquire()
 
     if not lock:
-        logger.error("Another istance of '%s' is running. Please wait for its termination or kill the running application" %(sys.argv[0]))
+        logger.error(
+            "Another istance of '%s' is running. Please wait for its termination or kill the running application" % (sys.argv[0]))
         sys.exit(-1)
 
-    #get all domain names
+    # get all domain names
     domains = [domain.name() for domain in conn.listAllDomains()]
-    
+
     # filter domains with user provides domains (if needed)
     if args.domains is not None:
-        logger.info("Checking '%s' domains" %(args.domains))
-        domains = filterDomains(domains,args.domains)
+        logger.info("Checking '%s' domains" % (args.domains))
+        domains = filterDomains(domains, args.domains)
 
-    #parse configuration file
+    # parse configuration file
     mydomains, backupdir, config = loadConf(args.config)
 
-    #test for directory existance
+    # test for directory existance
     if not os.path.exists(backupdir) and os.path.isdir(backupdir) is False:
-        logger.info("Creating directory '%s'" %(backupdir))
+        logger.info("Creating directory '%s'" % (backupdir))
         os.mkdir(backupdir)
 
-    #debug
-    #pprint.pprint(mydomains)
+    # debug
+    # pprint.pprint(mydomains)
 
     for domain_name, parameters in mydomains.iteritems():
-        #check if bakcup is needed
+        # check if bakcup is needed
         domain_backup = False
-        
-        #check if configuration domain exists or was filtered out
+
+        # check if configuration domain exists or was filtered out
         if domain_name not in domains:
-            logger.warn("Ignoring domain '%s'" %(domain_name))
+            logger.warn("Ignoring domain '%s'" % (domain_name))
             continue
 
         for day in parameters["day_of_week"]:
             if checkDay(day) is True or args.force is True:
-                logger.info("Ready for backup of '%s'" %(domain_name))
+                logger.info("Ready for backup of '%s'" % (domain_name))
                 domain_backup = True
 
-                #do backup stuff
+                # do backup stuff
                 try:
                     backup(domain_name, parameters, backupdir)
-                
+
                 except Exception, message:
                     logger.exception(message)
-                    logger.error("Domain '%s' was not backed up" %(domain_name))
+                    logger.error("Domain '%s' was not backed up" %
+                                 (domain_name))
                     flag_errors = True
 
-                #breaking cicle
+                # breaking cicle
                 break
 
         if domain_backup is False:
-            logger.debug("Ignoring '%s' domain" %(domain_name))
+            logger.debug("Ignoring '%s' domain" % (domain_name))
 
-    #end of the program
+    # end of the program
     if flag_errors is False:
-        logger.info("'%s' completed successfully" %(prog_name))
+        logger.info("'%s' completed successfully" % (prog_name))
     else:
-        logger.warn("'%s' completed with error(s)" %(prog_name))
+        logger.warn("'%s' completed with error(s)" % (prog_name))

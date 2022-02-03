@@ -25,31 +25,36 @@ Simple lockfile to detect previous instances of app (Python recipe http://code.a
 
 """
 
+import logging
 import os
 import socket
-import logging
 
 # Logging istance
 logger = logging.getLogger(__name__)
+
 
 class flock(object):
     '''Class to handle creating and removing (pid) lockfiles'''
 
     # custom exceptions
-    class FileLockAcquisitionError(Exception): pass
-    class FileLockReleaseError(Exception): pass
+    class FileLockAcquisitionError(Exception):
+        pass
+
+    class FileLockReleaseError(Exception):
+        pass
 
     # convenience callables for formatting
-    addr = lambda self: '%d@%s' % (self.pid, self.host)
-    fddr = lambda self: '<%s %s>' % (self.path, self.addr())
-    pddr = lambda self, lock: '<%s %s@%s>' %\
-                              (self.path, lock['pid'], lock['host'])
+    def addr(self): return '%d@%s' % (self.pid, self.host)
+    def fddr(self): return '<%s %s>' % (self.path, self.addr())
+
+    def pddr(self, lock): return '<%s %s@%s>' %\
+        (self.path, lock['pid'], lock['host'])
 
     def __init__(self, path, debug=None):
-        self.pid   = os.getpid()
-        self.host  = socket.gethostname()
-        self.path  = path
-        self.debug = debug # set this to get status messages
+        self.pid = os.getpid()
+        self.host = socket.gethostname()
+        self.path = path
+        self.debug = debug  # set this to get status messages
 
     def acquire(self):
         '''Acquire a lock, returning self if successful, False otherwise'''
@@ -90,7 +95,7 @@ class flock(object):
         '''Internal method to read lock info'''
         try:
             lock = {}
-            fh   = open(self.path)
+            fh = open(self.path)
             data = fh.read().rstrip().split('@')
             fh.close()
             lock['pid'], lock['host'] = data
@@ -116,15 +121,17 @@ class flock(object):
         '''Magic method to clean up lock when program exits'''
         self.release()
 
-## ========
+# ========
 
-## Test programs: run test1.py then test2.py (in the same dir)
-## from another teminal -- test2.py should print
-## a message that there is a lock in place and exit.
+# Test programs: run test1.py then test2.py (in the same dir)
+# from another teminal -- test2.py should print
+# a message that there is a lock in place and exit.
+
 
 if __name__ == "__main__":
     # test1.py
     from time import sleep
+
     #from flock import flock
     lock = flock('tmp.lock', True).acquire()
     if lock:
