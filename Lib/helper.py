@@ -222,7 +222,7 @@ class Snapshot():
         # now construct all diskspec
         diskspecs = []
 
-        for disk in self.disks.iterkeys():
+        for disk in iter(self.disks):
             diskspecs += [
                 "--diskspec %s,file=/var/lib/libvirt/images/snapshot"
                 "_%s_%s-%s.img" % (
@@ -248,7 +248,7 @@ class Snapshot():
             shell=False)
 
         # read output in xml
-        self.snapshot_xml = create_xml.stdout.read()
+        self.snapshot_xml = create_xml.stdout.read().decode("ascii")
 
         # Lancio il comando e aspetto che termini
         status = create_xml.wait()
@@ -312,7 +312,7 @@ class Snapshot():
 
         # A blockcommit for every disks. Using names like libvirt variables.
         # Base is the original image file
-        for disk in self.disks.iterkeys():
+        for disk in iter(self.disks):
             # the command to execute
             my_cmd = (
                 "virsh blockcommit {domain_name} {disk} --active "
