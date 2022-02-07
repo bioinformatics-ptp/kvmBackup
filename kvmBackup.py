@@ -46,12 +46,14 @@ prog_name = os.path.basename(sys.argv[0])
 
 # Logging istance
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.DEBUG)
 logger = logging.getLogger(prog_name)
 
 notice = """
 kvmBackup.py  Copyright (C) 2015-2016  PTP
-This program comes with ABSOLUTELY NO WARRANTY; for details type `kvmBackup.py --help'.
+This program comes with ABSOLUTELY NO WARRANTY; for details type
+    `kvmBackup.py --help'.
 This is free software, and you are welcome to redistribute it
 under certain conditions; see LICENSE.txt for details.
 
@@ -220,8 +222,10 @@ if __name__ == "__main__":
                         type=str, help="The config file")
     parser.add_argument("--force", required=False, action='store_true',
                         default=False, help="Force backup (with rotation)")
-    parser.add_argument("--domains", required=False, type=str,
-                        help="comma separated list of domains to backup ('virsh list --all' to get domains)")
+    parser.add_argument(
+        "--domains", required=False, type=str,
+        help=("comma separated list of domains to backup ('virsh list "
+              "--all' to get domains)"))
     args = parser.parse_args()
 
     # logging notice
@@ -241,7 +245,8 @@ if __name__ == "__main__":
 
     if not lock:
         logger.error(
-            "Another istance of '%s' is running. Please wait for its termination or kill the running application" % (sys.argv[0]))
+            "Another istance of '%s' is running. Please wait for its "
+            "termination or kill the running application" % (sys.argv[0]))
         sys.exit(-1)
 
     # get all domain names

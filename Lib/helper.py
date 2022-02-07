@@ -46,8 +46,9 @@ logger = logging.getLogger(__name__)
 # A global connection instance
 conn = libvirt.open("qemu:///system")
 
-# una funzione che ho trovato qui: https://blog.nelhage.com/2010/02/a-very-subtle-bug/
-# e che dovrebbe gestire i segnali strani quando esco da un suprocess
+# a function found here:
+# https://blog.nelhage.com/2010/02/a-very-subtle-bug/
+# which attempt to deal with signals when exiting subprocess
 
 
 def preexec_fn(): return signal.signal(signal.SIGPIPE, signal.SIG_DFL)
@@ -126,7 +127,8 @@ def getDisks(domain):
     # the fromstring method returns the root node
     root = ET.fromstring(domain.XMLDesc())
 
-    # then use XPath to search a line like <disk type='file' device='disk'> under <device> tag
+    # then use XPath to search a line like
+    # <disk type='file' device='disk'> under <device> tag
     devices = root.findall("./devices/disk[@device='disk']")
 
     # Now find the child element with source tag
@@ -205,8 +207,8 @@ class Snapshot():
             return True
 
     def getSnapshotXML(self):
-        """Since I need to do a Snapshot with a XML file, I will create an XML to call
-        the appropriate libvirt method"""
+        """Since I need to do a Snapshot with a XML file, I will create an XML
+        to call the appropriate libvirt method"""
 
         # get my domain
         domain = self.getDomain()
@@ -221,11 +223,17 @@ class Snapshot():
         diskspecs = []
 
         for disk in self.disks.iterkeys():
-            diskspecs += ["--diskspec %s,file=/var/lib/libvirt/images/snapshot_%s_%s-%s.img" %
-                          (disk, self.domain_name, disk, self.snapshotId)]
+            diskspecs += [
+                "--diskspec %s,file=/var/lib/libvirt/images/snapshot"
+                "_%s_%s-%s.img" % (
+                    disk, self.domain_name, disk, self.snapshotId)]
 
-        my_cmd = "virsh snapshot-create-as --domain {domain_name} {snapshotId} {diskspecs} --disk-only --atomic --quiesce --print-xml".format(
-            domain_name=domain.name(), snapshotId=self.snapshotId, diskspecs=" ".join(diskspecs))
+        my_cmd = (
+            "virsh snapshot-create-as --domain {domain_name} {snapshotId} "
+            "{diskspecs} --disk-only --atomic --quiesce --print-xml").format(
+                domain_name=domain.name(),
+                snapshotId=self.snapshotId,
+                diskspecs=" ".join(diskspecs))
 
         logger.debug("Executing: %s" % (my_cmd))
 
@@ -234,7 +242,10 @@ class Snapshot():
 
         # Launch command
         create_xml = subprocess.Popen(
-            my_cmds, stdout=subprocess.PIPE, stderr=subprocess.PIPE, preexec_fn=preexec_fn, shell=False)
+            my_cmds, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            preexec_fn=preexec_fn,
+            shell=False)
 
         # read output in xml
         self.snapshot_xml = create_xml.stdout.read()
@@ -265,8 +276,10 @@ class Snapshot():
             self.getSnapshotXML()
 
         # Those are the flags I need for creating SnapShot
-        [disk_only, atomic, quiesce] = [libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_DISK_ONLY,
-                                        libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_ATOMIC, libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE]
+        [disk_only, atomic, quiesce] = [
+            libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_DISK_ONLY,
+            libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_ATOMIC,
+            libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE]
 
         # get a domain
         domain = self.getDomain()
@@ -277,13 +290,15 @@ class Snapshot():
         self.snapshot = domain.snapshotCreateXML(
             self.snapshot_xml, flags=sum([disk_only, atomic, quiesce]))
 
-        # Once i've created a snapshot, I can read disks to have snapshot image name
+        # Once i've created a snapshot, I can read disks to have snapshot
+        # image name
         self.snapshot_disk = self.getDisks()
 
         # debug
         for disk, top in self.snapshot_disk.iteritems():
-            logger.debug("Created top image {top} for {domain_name} {disk}".format(
-                top=top, domain_name=domain.name(), disk=disk))
+            logger.debug(
+                "Created top image {top} for {domain_name} {disk}".format(
+                    top=top, domain_name=domain.name(), disk=disk))
 
         return self.snapshot
 
@@ -295,11 +310,14 @@ class Snapshot():
 
         logger.info("Blockcommitting %s" % (domain.name()))
 
-        # A blockcommit for every disks. Using names like libvirt variables. Base is the original image file
+        # A blockcommit for every disks. Using names like libvirt variables.
+        # Base is the original image file
         for disk in self.disks.iterkeys():
             # the command to execute
-            my_cmd = "virsh blockcommit {domain_name} {disk} --active --verbose --pivot".format(
-                domain_name=domain.name(), disk=disk)
+            my_cmd = (
+                "virsh blockcommit {domain_name} {disk} --active "
+                "--verbose --pivot").format(
+                    domain_name=domain.name(), disk=disk)
             logger.debug("Executing: %s" % (my_cmd))
 
             # split the executable
@@ -307,12 +325,16 @@ class Snapshot():
 
             # Launch command
             blockcommit = subprocess.Popen(
-                my_cmds, stdout=subprocess.PIPE, stderr=subprocess.PIPE, preexec_fn=preexec_fn, shell=False)
+                my_cmds,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                preexec_fn=preexec_fn,
+                shell=False)
 
             # read output throug processing
             for line in blockcommit.stdout:
                 line = line.strip()
-                if len(line) is 0:
+                if len(line) == 0:
                     continue
 
                 logger.debug("%s" % (line))
@@ -387,13 +409,17 @@ def packArchive(target):
     my_cmds = shlex.split(my_cmd)
 
     # Launch command
-    pigz = subprocess.Popen(my_cmds, stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE, preexec_fn=preexec_fn, shell=False)
+    pigz = subprocess.Popen(
+        my_cmds,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        preexec_fn=preexec_fn,
+        shell=False)
 
     # read output throug processing
     for line in pigz.stdout:
         line = line.strip()
-        if len(line) is 0:
+        if len(line) == 0:
             continue
 
         logger.debug("%s" % (line))

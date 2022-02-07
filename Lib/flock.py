@@ -72,11 +72,13 @@ class flock(object):
             fh.close()
             if self.debug:
                 logger.debug('Acquired lock: %s' % self.fddr())
-        except:
+
+        # TODO: catch the proper exception
+        except Exception:
             if os.path.isfile(self.path):
                 try:
                     os.unlink(self.path)
-                except:
+                except Exception:
                     pass
             raise (self.FileLockAcquisitionError,
                    'Error acquiring lock: %s' % self.fddr())
@@ -89,7 +91,7 @@ class flock(object):
                 os.unlink(self.path)
                 if self.debug:
                     logger.debug('Released lock: %s' % self.fddr())
-            except:
+            except Exception:
                 raise (self.FileLockReleaseError,
                        'Error releasing lock: %s' % self.fddr())
         return self
@@ -103,7 +105,7 @@ class flock(object):
             fh.close()
             lock['pid'], lock['host'] = data
             return lock
-        except:
+        except Exception:
             return {'pid': 8**10, 'host': ''}
 
     def islocked(self):
@@ -112,7 +114,7 @@ class flock(object):
             lock = self._readlock()
             os.kill(int(lock['pid']), 0)
             return (lock['host'] == self.host)
-        except:
+        except Exception:
             return False
 
     def ownlock(self):
