@@ -25,6 +25,8 @@ A module to deal with KVM backup
 
 """
 
+from __future__ import print_function
+
 import logging
 import os
 import shlex
@@ -32,6 +34,7 @@ import shutil
 import signal
 import subprocess
 import uuid
+
 # To inspect xml
 import xml.etree.ElementTree as ET
 
@@ -62,7 +65,7 @@ def dumpXML(domain, path):
     dest_file = os.path.join(path, dest_file)
 
     if os.path.exists(dest_file):
-        raise Exception, "File %s exists!!" % (dest_file)
+        raise Exception("File %s exists!!" % (dest_file))
 
     dest_fh = open(dest_file, "w")
 
@@ -74,12 +77,14 @@ def dumpXML(domain, path):
     xml_files += [dest_file]
     logger.debug("File %s wrote" % (dest_file))
 
-    # All flags: libvirt.VIR_DOMAIN_XML_INACTIVE, libvirt.VIR_DOMAIN_XML_MIGRATABLE, libvirt.VIR_DOMAIN_XML_SECURE, libvirt.VIR_DOMAIN_XML_UPDATE_CPU
+    # All flags: libvirt.VIR_DOMAIN_XML_INACTIVE,
+    # libvirt.VIR_DOMAIN_XML_MIGRATABLE, libvirt.VIR_DOMAIN_XML_SECURE,
+    # libvirt.VIR_DOMAIN_XML_UPDATE_CPU
     dest_file = "%s-inactive.xml" % (domain.name())
     dest_file = os.path.join(path, dest_file)
 
     if os.path.exists(dest_file):
-        raise Exception, "File %s exists!!" % (dest_file)
+        raise Exception("File %s exists!!" % (dest_file))
 
     dest_fh = open(dest_file, "w")
 
@@ -96,13 +101,14 @@ def dumpXML(domain, path):
     dest_file = os.path.join(path, dest_file)
 
     if os.path.exists(dest_file):
-        raise Exception, "File %s exists!!" % (dest_file)
+        raise Exception("File %s exists!!" % (dest_file))
 
     dest_fh = open(dest_file, "w")
 
     # dump different xmls files. First of all, the offline dump
     xml = domain.XMLDesc(
-        flags=libvirt.VIR_DOMAIN_XML_INACTIVE+libvirt.VIR_DOMAIN_XML_MIGRATABLE)
+        flags=libvirt.VIR_DOMAIN_XML_INACTIVE +
+        libvirt.VIR_DOMAIN_XML_MIGRATABLE)
     dest_fh.write(xml)
     dest_fh.close()
 
@@ -131,7 +137,11 @@ def getDisks(domain):
 
     # iterate amoung sources and targets
     if len(sources) != len(targets):
-        raise Exception, "Targets and sources lengths are different %s:%s" % (len(sources), len(targets))
+        raise Exception(
+            "Targets and sources lengths are different %s:%s" % (
+                len(sources), len(targets)
+            )
+        )
 
     # here all the devices I want to back up
     devs = {}
@@ -237,7 +247,7 @@ class Snapshot():
                          (my_cmds, create_xml.stderr.read()))
             logger.critical("{exe} returned {stato} state".format(
                 stato=status, exe=my_cmds[0]))
-            raise Exception, "snapshot-create-as didn't work properly"
+            raise Exception("snapshot-create-as didn't work properly")
 
         return self.snapshot_xml
 
@@ -315,9 +325,10 @@ class Snapshot():
                              (my_cmds, blockcommit.stderr.read()))
                 logger.critical("{exe} returned {stato} state".format(
                     stato=status, exe=my_cmds[0]))
-                raise Exception, "blockcommit didn't work properly"
+                raise Exception("blockcommit didn't work properly")
 
-        # After blockcommit, I need to check that image were successfully pivoted
+        # After blockcommit, I need to check that image were successfully
+        # pivoted
         test_disks = self.getDisks()
 
         for disk, base in self.disks.iteritems():
@@ -332,7 +343,8 @@ class Snapshot():
             else:
                 logger.error("original base: %s, top: %s, new_base: %s" %
                              (base, top, test_base))
-                raise Exception, "Something goes wrong for snaphost %s" % (self.snapshotId)
+                raise Exception(
+                    "Something goes wrong for snaphost %s" % (self.snapshotId))
 
         # If I arrive here, I can delete snapshot
         self.__snapshotDelete()
@@ -393,4 +405,4 @@ def packArchive(target):
         logger.error("Error for %s:%s" % (my_cmds, pigz.stderr.read()))
         logger.critical("{exe} returned {stato} state".format(
             stato=status, exe=my_cmds[0]))
-        raise Exception, "pigz didn't work properly"
+        raise Exception("pigz didn't work properly")

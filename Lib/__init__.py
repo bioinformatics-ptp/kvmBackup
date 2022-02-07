@@ -26,5 +26,5 @@ import helper
 import flock
 
 __author__ = "Paolo Cozzi"
-__version__ = "1.0"
+__version__ = "1.1"
 __all__ = ["helper", "flock"]

@@ -21,9 +21,12 @@ Created on Wed Oct 21 13:08:56 2015
 
 @author: Paolo Cozzi <paolo.cozzi@ptp.it>
 
-Simple lockfile to detect previous instances of app (Python recipe http://code.activestate.com/recipes/498171/)
+Simple lockfile to detect previous instances of app (Python recipe
+http://code.activestate.com/recipes/498171/)
 
 """
+
+from __future__ import print_function
 
 import logging
 import os
@@ -132,17 +135,17 @@ if __name__ == "__main__":
     # test1.py
     from time import sleep
 
-    #from flock import flock
+    # from flock import flock
     lock = flock('tmp.lock', True).acquire()
     if lock:
         sleep(30)
     else:
-        print 'locked!'
+        print('locked!')
 
     # test2.py
     from flock import flock
     lock = flock('tmp.lock', True).acquire()
     if lock:
-        print 'doing stuff'
+        print('doing stuff')
     else:
-        print 'locked!'
+        print('locked!')

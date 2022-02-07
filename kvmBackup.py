@@ -24,6 +24,8 @@ Created on Fri Oct  9 11:20:46 2015
 
 """
 
+from __future__ import print_function
+
 import argparse
 import datetime
 import logging
@@ -113,7 +115,7 @@ def backup(domain, parameters, backupdir):
 
     # check if no snapshot are defined
     if snapshot.hasCurrentSnapshot() is True:
-        raise Exception, "Domain '%s' has already a snapshot" % (domain)
+        raise Exception("Domain '%s' has already a snapshot" % (domain))
 
     # changing directory
     olddir = os.getcwd()
@@ -279,7 +281,7 @@ if __name__ == "__main__":
                 try:
                     backup(domain_name, parameters, backupdir)
 
-                except Exception, message:
+                except Exception as message:
                     logger.exception(message)
                     logger.error("Domain '%s' was not backed up" %
                                  (domain_name))
