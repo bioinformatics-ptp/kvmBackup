@@ -295,7 +295,7 @@ class Snapshot():
         self.snapshot_disk = self.getDisks()
 
         # debug
-        for disk, top in self.snapshot_disk.iteritems():
+        for disk, top in iter(self.snapshot_disk.items()):
             logger.debug(
                 "Created top image {top} for {domain_name} {disk}".format(
                     top=top, domain_name=domain.name(), disk=disk))
@@ -353,7 +353,7 @@ class Snapshot():
         # pivoted
         test_disks = self.getDisks()
 
-        for disk, base in self.disks.iteritems():
+        for disk, base in iter(self.disks.items()):
             test_base = test_disks[disk]
             top = self.snapshot_disk[disk]
 

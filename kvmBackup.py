@@ -178,7 +178,7 @@ def backup(domain, parameters, backupdir):
                 (domain, tar_path))
 
     # copying file
-    for disk, source in snapshot.disks.iteritems():
+    for disk, source in iter(snapshot.disks.items()):
         dest = os.path.join(datadir, os.path.basename(source))
 
         logger.debug("copying '%s' to '%s'" % (source, dest))
@@ -268,7 +268,7 @@ if __name__ == "__main__":
     # debug
     # pprint.pprint(mydomains)
 
-    for domain_name, parameters in mydomains.iteritems():
+    for domain_name, parameters in iter(mydomains.items()):
         # check if bakcup is needed
         domain_backup = False
 
