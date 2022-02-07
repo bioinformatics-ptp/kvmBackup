@@ -59,10 +59,10 @@ under certain conditions; see LICENSE.txt for details.
 
 """
 
-# A function to open a config file
-
 
 def loadConf(file_conf):
+    """A function to open a config file"""
+
     config = yaml.load(open(file_conf))
 
     # read my defined domains
@@ -77,10 +77,10 @@ def loadConf(file_conf):
 
     return mydomains, backupdir, config
 
-# a function to check current day of the week
-
 
 def checkDay(day):
+    """A function to check current day of the week"""
+
     now = datetime.datetime.now()
     today = now.strftime("%a")
 
@@ -114,6 +114,12 @@ def backup(domain, parameters, backupdir):
 
     # create a snapshot instance
     snapshot = helper.Snapshot(domain)
+
+    # check if domain is active
+    if not snapshot.domainIsActive():
+        logger.error(
+            "domain '%s' is not Active: is VM up and running?" % domain)
+        raise NotImplementedError("Cannot backup an inactive domain!")
 
     # check if no snapshot are defined
     if snapshot.hasCurrentSnapshot() is True:

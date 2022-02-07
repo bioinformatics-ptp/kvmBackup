@@ -176,31 +176,34 @@ class Snapshot():
 
         return self.conn.lookupByName(self.domain_name)
 
+    @property
+    def domain(self):
+        return self.getDomain()
+
+    def domainIsActive(self):
+        """Return true if domain is active (VM up and running)"""
+
+        if self.domain.isActive():
+            return True
+
+        return False
+
     def getDisks(self):
         """Call getDisk on my instance"""
 
-        # get my domain
-        domain = self.getDomain()
-
         # call getDisk to get the disks to do snapshot
-        return getDisks(domain)
+        return getDisks(self.domain)
 
     def dumpXML(self, path):
         """Call dumpXML on my instance"""
 
-        # get my domain
-        domain = self.getDomain()
-
         # call getDisk to get the disks to do snapshot
-        return dumpXML(domain, path)
+        return dumpXML(self.domain, path)
 
     def hasCurrentSnapshot(self):
         """call hasCurrentSnapshot on domain class attribute"""
 
-        # get my domain
-        domain = self.getDomain()
-
-        if domain.hasCurrentSnapshot() == 0:
+        if self.domain.hasCurrentSnapshot() == 0:
             return False
 
         else:
@@ -209,9 +212,6 @@ class Snapshot():
     def getSnapshotXML(self):
         """Since I need to do a Snapshot with a XML file, I will create an XML
         to call the appropriate libvirt method"""
-
-        # get my domain
-        domain = self.getDomain()
 
         # call getDisk to get the disks to do snapshot
         self.disks = self.getDisks()
@@ -231,7 +231,7 @@ class Snapshot():
         my_cmd = (
             "virsh snapshot-create-as --domain {domain_name} {snapshotId} "
             "{diskspecs} --disk-only --atomic --quiesce --print-xml").format(
-                domain_name=domain.name(),
+                domain_name=self.domain.name(),
                 snapshotId=self.snapshotId,
                 diskspecs=" ".join(diskspecs))
 
@@ -281,13 +281,10 @@ class Snapshot():
             libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_ATOMIC,
             libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE]
 
-        # get a domain
-        domain = self.getDomain()
-
         # do a snapshot
         logger.info("Creating snapshot %s for %s" %
                     (self.snapshotId, self.domain_name))
-        self.snapshot = domain.snapshotCreateXML(
+        self.snapshot = self.domain.snapshotCreateXML(
             self.snapshot_xml, flags=sum([disk_only, atomic, quiesce]))
 
         # Once i've created a snapshot, I can read disks to have snapshot
@@ -298,17 +295,14 @@ class Snapshot():
         for disk, top in iter(self.snapshot_disk.items()):
             logger.debug(
                 "Created top image {top} for {domain_name} {disk}".format(
-                    top=top, domain_name=domain.name(), disk=disk))
+                    top=top, domain_name=self.domain.name(), disk=disk))
 
         return self.snapshot
 
     def doBlockCommit(self):
         """Do a blockcommit for every disks shapshotted"""
 
-        # get a domain
-        domain = self.getDomain()
-
-        logger.info("Blockcommitting %s" % (domain.name()))
+        logger.info("Blockcommitting %s" % (self.domain.name()))
 
         # A blockcommit for every disks. Using names like libvirt variables.
         # Base is the original image file
@@ -317,7 +311,7 @@ class Snapshot():
             my_cmd = (
                 "virsh blockcommit {domain_name} {disk} --active "
                 "--verbose --pivot").format(
-                    domain_name=domain.name(), disk=disk)
+                    domain_name=self.domain.name(), disk=disk)
             logger.debug("Executing: %s" % (my_cmd))
 
             # split the executable
