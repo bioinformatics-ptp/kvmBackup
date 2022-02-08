@@ -47,7 +47,7 @@ prog_name = os.path.basename(sys.argv[0])
 # Logging istance
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.DEBUG)
+    level=logging.INFO)
 logger = logging.getLogger(prog_name)
 
 notice = """
@@ -65,15 +65,39 @@ def loadConf(file_conf):
 
     config = yaml.load(open(file_conf))
 
+    if not config:
+        raise RuntimeError(
+            "Error in configuration file. Check for kvmbackup documentation")
+
     # read my defined domains
     hostname = socket.gethostname()
     hostname = hostname.split(".")[0]
 
     # try to parse useful data
-    mydomains = config[hostname]["domains"]
+    mydomains = {}
+    backupdir = None
+
+    if hostname not in config:
+        raise RuntimeError("Can't find '%s' in configuration file" % hostname)
+
+    try:
+        mydomains = config[hostname]["domains"]
+
+    except (TypeError, KeyError):
+        logger.warning("Cannot read 'domains' for '%s'" % hostname)
+        logger.warning("Is configuration file defined properly?")
 
     # get my backup directory
-    backupdir = config[hostname]["backupdir"]
+    try:
+        backupdir = config[hostname]["backupdir"]
+
+    except (TypeError, KeyError):
+        logger.warning("Cannot read 'backupdir' for '%s'" % hostname)
+        logger.warning("Is configuration file defined properly?")
+
+    if not mydomains or not backupdir:
+        raise RuntimeError(
+            "Error in configuration file. Check for kvmbackup documentation")
 
     return mydomains, backupdir, config
 
@@ -229,6 +253,7 @@ def backup(domain, parameters, backupdir):
 # A global connection instance
 conn = libvirt.open("qemu:///system")
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Backup of KVM-qcow2 domains')
     parser.add_argument("-c", "--config", required=True,
@@ -239,7 +264,13 @@ if __name__ == "__main__":
         "--domains", required=False, type=str,
         help=("comma separated list of domains to backup ('virsh list "
               "--all' to get domains)"))
+    parser.add_argument(
+        "-v", "--verbose", action='store_true',
+        help="verbose logging")
     args = parser.parse_args()
+
+    if args.verbose:
+        logger.setLevel(logging.DEBUG)
 
     # logging notice
     sys.stderr.write(notice)
@@ -287,7 +318,7 @@ if __name__ == "__main__":
 
         # check if configuration domain exists or was filtered out
         if domain_name not in domains:
-            logger.warn("Ignoring domain '%s'" % (domain_name))
+            logger.info("Ignoring domain '%s'" % (domain_name))
             continue
 
         for day in parameters["day_of_week"]:
@@ -309,7 +340,7 @@ if __name__ == "__main__":
                 break
 
         if domain_backup is False:
-            logger.debug("Ignoring '%s' domain" % (domain_name))
+            logger.info("Ignoring '%s' domain" % (domain_name))
 
     # end of the program
     if flag_errors is False:

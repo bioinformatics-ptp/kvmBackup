@@ -1,10 +1,7 @@
 
 * e-mail notify for problems
 * add documentation
-* verbosity level
 * copy CD-rom data
-* testing wrong configurations
 * rotating using dates, not numbers
 * dealing with power off VM
-* deal with empty configurations
 * python packaging?
