@@ -27,14 +27,15 @@ A module to deal with KVM backup
 
 from __future__ import print_function
 
+import json
 import logging
+import multiprocessing
 import os
 import shlex
 import shutil
 import signal
 import subprocess
 import uuid
-import json
 
 # To inspect xml
 import xml.etree.ElementTree as ET
@@ -416,10 +417,16 @@ def rotate(target, retention=3):
         shutil.move(target, target + '.1')
 
 
-def packArchive(target):
+def packArchive(target, cpu_limit=8):
     """Launch pigz for compressing files"""
 
-    my_cmd = "pigz --best --processes 8 %s" % (target)
+    cpus = multiprocessing.cpu_count()
+
+    # setting number of cpus
+    if cpus > cpu_limit:
+        cpus = cpu_limit
+
+    my_cmd = "pigz --best --processes %s %s" % (cpus, target)
     logger.debug("Executing: %s" % (my_cmd))
 
     # split the executable
