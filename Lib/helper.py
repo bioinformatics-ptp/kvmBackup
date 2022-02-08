@@ -34,11 +34,13 @@ import shutil
 import signal
 import subprocess
 import uuid
+import json
 
 # To inspect xml
 import xml.etree.ElementTree as ET
 
 import libvirt
+import libvirt_qemu
 
 # Logging istance
 logger = logging.getLogger(__name__)
@@ -184,6 +186,27 @@ class Snapshot():
         """Return true if domain is active (VM up and running)"""
 
         if self.domain.isActive():
+            return True
+
+        return False
+
+    def domainHasGuestAgent(self):
+        """Test if Guest Agent is up and running"""
+
+        try:
+            response = libvirt_qemu.qemuAgentCommand(
+                self.domain,
+                '{"execute":"guest-ping"}',
+                timeout=30,
+                flags=0)
+
+        except libvirt.libvirtError as error:
+            logger.error(error)
+            return False
+
+        data = json.loads(response)
+
+        if 'return' in data:
             return True
 
         return False

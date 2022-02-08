@@ -121,6 +121,13 @@ def backup(domain, parameters, backupdir):
             "domain '%s' is not Active: is VM up and running?" % domain)
         raise NotImplementedError("Cannot backup an inactive domain!")
 
+    # check that guest agent is Up and running
+    if not snapshot.domainHasGuestAgent():
+        logger.error("QEMU guest agent is a requisite for a safe snapshot")
+        logger.error("Please check kvmBackup wiki pages for more info")
+        raise RuntimeError(
+            "Guest agent is not running. Check '%s' domain" % domain)
+
     # check if no snapshot are defined
     if snapshot.hasCurrentSnapshot() is True:
         raise Exception("Domain '%s' has already a snapshot" % (domain))
