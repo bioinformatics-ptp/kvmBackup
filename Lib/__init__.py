@@ -2,7 +2,7 @@
 """
 
 kvmBackup - a software for snapshotting KVM images and backing them up
-Copyright (C) 2015-2016  PTP
+Copyright (C) 2015-2022  Paolo Cozzi
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 Created on Wed Oct 21 13:56:55 2015
 
-@author: Paolo Cozzi <paolo.cozzi@ptp.it>
+@author: Paolo Cozzi <bunop@libero.it>
 """
 
 from . import helper

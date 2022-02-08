@@ -3,7 +3,7 @@
 """
 
 kvmBackup - a software for snapshotting KVM images and backing them up
-Copyright (C) 2015-2016  PTP
+Copyright (C) 2015-2022  Paolo Cozzi
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 Created on Fri Oct  9 11:20:46 2015
 
-@author: Paolo Cozzi <paolo.cozzi@ptp.it>
+@author: Paolo Cozzi <bunop@libero.it>
 
 """
 
@@ -51,7 +51,7 @@ logging.basicConfig(
 logger = logging.getLogger(prog_name)
 
 notice = """
-kvmBackup.py  Copyright (C) 2015-2016  PTP
+kvmBackup.py  Copyright (C) 2015-2022  Paolo Cozzi
 This program comes with ABSOLUTELY NO WARRANTY; for details type
     `kvmBackup.py --help'.
 This is free software, and you are welcome to redistribute it
