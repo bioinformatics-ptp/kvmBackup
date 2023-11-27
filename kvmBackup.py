@@ -63,7 +63,7 @@ under certain conditions; see LICENSE.txt for details.
 def loadConf(file_conf):
     """A function to open a config file"""
 
-    config = yaml.load(open(file_conf))
+    config = yaml.load(open(file_conf), Loader=yaml.SafeLoader)
 
     if not config:
         raise RuntimeError(
@@ -346,4 +346,4 @@ if __name__ == "__main__":
     if flag_errors is False:
         logger.info("'%s' completed successfully" % (prog_name))
     else:
-        logger.warn("'%s' completed with error(s)" % (prog_name))
+        logger.warning("'%s' completed with error(s)" % (prog_name))

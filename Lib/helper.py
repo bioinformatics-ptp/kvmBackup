@@ -292,7 +292,7 @@ class Snapshot():
         # Don't redo a snapshot on the same item
         if self.snapshot is not None:
             logger.error("A snapshot is already defined for this domain")
-            logger.warn("Returning the current snapshot")
+            logger.warning("Returning the current snapshot")
             return self.snapshot
 
         # i need a xml file for the domain
